@@ -1,4 +1,5 @@
 import Data.List (group, sortBy)
+
 main = interact $ show . solve . words . last . lines
 
 solve :: [String] -> Int

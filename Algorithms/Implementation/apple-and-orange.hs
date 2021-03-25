@@ -1,11 +1,9 @@
+import Control.Monad (replicateM)
+
 main = do
-    [s, t] <- map read . words <$> getLine
-    [a, b] <- map read . words <$> getLine
-    getLine -- ignored line
-    apples <- map read . words <$> getLine
-    oranges <- map read . words <$> getLine
-    print $ count s t a apples
-    print $ count s t b oranges
+    [[s, t], [a, b], as, os] <-
+        map (map read . words) . (\x -> take 2 x ++ drop 3 x) <$> replicateM 5 getLine
+    putStrLn . unlines . map show $ [count s t a as, count s t b os]
 
 count :: Int -> Int -> Int -> [Int] -> Int
 count s t tree = length . filter (\n -> n >= s && n <= t) . map (tree +)

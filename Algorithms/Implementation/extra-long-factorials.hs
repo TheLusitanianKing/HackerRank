@@ -1,3 +1,1 @@
-main = do
-    n <- (read :: String -> Integer) <$> getLine
-    print $ product [1..n]
+main = interact $ show . (\n -> product [1..n]) . (read :: String -> Integer)

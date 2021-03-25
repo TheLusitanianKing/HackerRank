@@ -1,6 +1,7 @@
+import Control.Monad (replicateM)
+
 main = do
-    [_, k] <- map read . words <$> getLine
-    xs     <- map read . words <$> getLine
+    [[_, k], xs] <- map (map read . words) <$> replicateM 2 getLine
     print $ total k xs
 
 total :: Int -> [Int] -> Int

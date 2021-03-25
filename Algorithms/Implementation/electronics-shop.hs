@@ -1,8 +1,4 @@
-main = do
-    (b:_) <- map read . words <$> getLine
-    ks    <- map read . words <$> getLine
-    ds    <- map read . words <$> getLine
-    print $ spent b ks ds
+main = interact $ show . (\[b:_, ks, ds] -> spent b ks ds) . map (map read . words) . lines
 
 spent :: Int -> [Int] -> [Int] -> Int
 spent b ks ds

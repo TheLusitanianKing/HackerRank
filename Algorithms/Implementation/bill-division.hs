@@ -1,8 +1,8 @@
+import Control.Monad (replicateM)
+
 main = do
-    [_, k]  <- map read . words <$> getLine
-    items   <- map read . words <$> getLine
-    charged <- read <$> getLine
-    case rectifier k items charged of
+    [[_, k], items, charged] <- map (map read . words) <$> replicateM 3 getLine
+    case rectifier k items (head charged) of
         Just n  -> print n
         Nothing -> putStrLn "Bon Appetit"
 

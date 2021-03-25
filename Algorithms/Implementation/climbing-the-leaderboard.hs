@@ -1,9 +1,8 @@
+import Control.Monad (replicateM)
 import Data.List (nub)
+
 main = do
-    getLine -- ignored
-    rs <- words <$> getLine
-    getLine -- ignored
-    ps <- words <$> getLine
+    [_, rs, _, ps] <- map words <$> replicateM 4 getLine
     putStrLn . unlines . map show . rankAll (prepare rs) $ ps
 
 prepare :: [String] -> [(Int, String)] -- (Rank, Score) from lowest to highest
