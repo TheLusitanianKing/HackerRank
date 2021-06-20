@@ -1,0 +1,1 @@
+-- The same as /FunctionalProgramming/Recursion/string-reductions.hs
