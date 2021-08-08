@@ -1,5 +1,5 @@
 # HackerRank
+My solutions to HackerRank challenges. You can find those challenges and try them yourself at https://www.hackerrank.com.
 
-Some of my Haskell solutions to HackerRank challenges.
-
-Solved **48** out of the **93** functional programming challenges so far.
+## Functional programming current record (8th August, 2021)
+Solved **48** out of the **93** challenges. Ranked **5th** in Portugal. 🇵🇹
