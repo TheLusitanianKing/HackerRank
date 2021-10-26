@@ -13,15 +13,19 @@ instance Show Coordinate where
 
 data CellState = Free (Maybe Char) | Blocked deriving (Eq, Ord)
 
-data Cell = Cell
-  { cellCoordinate :: Coordinate
-  , cellState      :: CellState
-  } deriving (Eq, Ord, Show)
-
 instance Show CellState where
   show Blocked         = "+"
   show (Free Nothing)  = "-"
   show (Free (Just c)) = [c]
+
+data Cell = Cell
+  { cellCoordinate :: Coordinate
+  , cellState      :: CellState
+  } deriving (Eq, Ord)
+
+instance Show Cell where
+  show (Cell cs st) = "(" <> show st <> ")" <> "@(" <> show x <> "," <> show y <> ")"
+    where (x, y) = coordinateValue cs
 
 -- TODO: make CellState an instance of Read instead?
 parseCellState :: Char -> CellState
