@@ -61,8 +61,38 @@ parseGrid lines =
               cell = Cell c (parseCellState col)
           in acc' <> Grid width [cell]
 
+solvedCell :: Cell -> Bool
+solvedCell c = case cellState c of
+  Blocked       -> True
+  Free (Just _) -> True
+  _             -> False
+
+solvedGrid :: Grid -> Bool
+solvedGrid = all solvedCell . gridCells
+
+data SegmentOrientation = Down | Right
+
+data Segment = Segment
+  { segmentCells :: [Cell]
+  , orientation  :: SegmentOrientation
+  }
+
+segments :: Grid -> [Segment]
+segments = undefined
+
+newtype Collapse = Collapse { collapsingCells :: (Cell, Cell) }
+
+collapsingSegments :: [Segment] -> [Collapse]
+collapsingSegments = undefined
+
+collapsesWell :: [Collapse] -> Bool
+collapsesWell = undefined
+
+applySegments :: Grid -> [Segment] -> Grid
+applySegments = undefined
+
 solve :: Grid -> [String] -> Grid
-solve grid words = grid -- TODO
+solve grid words = undefined
 
 main :: IO ()
 main = interact $
