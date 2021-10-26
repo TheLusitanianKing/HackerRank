@@ -8,12 +8,15 @@ import qualified Data.Set as Set
 newtype Coordinate = Coordinate
   { coordinateValue :: (Int, Int) } deriving (Eq, Ord)
 
+instance Show Coordinate where
+  show = show . coordinateValue
+
 data CellState = Free (Maybe Char) | Blocked deriving (Eq, Ord)
 
 data Cell = Cell
   { cellCoordinate :: Coordinate
   , cellState      :: CellState
-  } deriving (Eq, Ord)
+  } deriving (Eq, Ord, Show)
 
 instance Show CellState where
   show Blocked         = "+"
@@ -88,12 +91,12 @@ freeCell c =
 solvedGrid :: Grid -> Bool
 solvedGrid = all solvedCell . gridCells
 
-data SegmentOrientation = Vertical | Horizontal deriving (Eq)
+data SegmentOrientation = Vertical | Horizontal deriving (Eq, Show)
 
 data Segment = Segment
   { segmentCells       :: Set Cell
   , segmentOrientation :: SegmentOrientation
-  } deriving (Eq)
+  } deriving (Eq, Show)
 
 -- | From a grid, determine all its segments
 segments :: Grid -> [Segment]
@@ -101,23 +104,25 @@ segments g =
   let w = gridWidth g
       freeCells = Set.toList . Set.filter freeCell $ gridCells g
       getSegments :: Cell -> [Segment]
-      getSegments c = nub $ mapMaybe (\c' -> trySegment c c' freeCells) freeCells
+      getSegments c = mapMaybe (\c' -> trySegment c c' freeCells) freeCells
       trySegment :: Cell -> Cell -> [Cell] -> Maybe Segment
       trySegment c1 c2 allFreeCells
         | x1 == x2 && abs (y1 - y2) == 1 =
-            return Segment
+          let coordinates = fmap Coordinate $ (,) <$> [x1] <*> [0..w]
+          in return Segment
               { segmentOrientation = Vertical
-              , segmentCells = undefined
+              , segmentCells = Set.fromList $ filter ((`elem` coordinates). cellCoordinate) freeCells
               }
         | y1 == y2 && abs (x1 - x2) == 1 =
-            return Segment
-              { segmentOrientation = Horizontal
-              , segmentCells = undefined
-              }
+          let coordinates = fmap Coordinate $ (,) <$> [0..w] <*> [y1]
+          in return Segment
+            { segmentOrientation = Horizontal
+            , segmentCells = Set.fromList $ filter ((`elem` coordinates). cellCoordinate) freeCells
+            }
         | otherwise = Nothing
         where (x1, y1) = coordinateValue . cellCoordinate $ c1
               (x2, y2) = coordinateValue . cellCoordinate $ c2
-  in concatMap getSegments freeCells
+  in nub $ concatMap getSegments freeCells
 
 -- | Apply a string to a segment, will return a segment on success
 applyWordToSegment :: Segment -> String -> Maybe Segment
@@ -140,7 +145,7 @@ applySegments = undefined
 -- | From non-completed grid and a list of words, will return a soluce list of grid
 -- or an error if it can't find a solution, which shouldn't happen
 solve :: Grid -> [String] -> Grid
-solve grid words = grid
+solve grid words = undefined
 
 main :: IO ()
 main = interact $
