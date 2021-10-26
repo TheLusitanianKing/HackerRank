@@ -46,6 +46,7 @@ allCoordinates :: Int -> [Coordinate]
 allCoordinates width = fmap Coordinate $ (,) <$> [0..width'] <*> [0..width']
   where width' = width - 1
 
+-- | From a list of lines representing a grid, read the actual information from it
 parseGrid :: [String] -> Grid
 parseGrid lines =
   foldr rowFold (Grid width []) $ zip [0..] lines
@@ -61,12 +62,16 @@ parseGrid lines =
               cell = Cell c (parseCellState col)
           in acc' <> Grid width [cell]
 
+-- | Return true if the cell is solved, meaning it is a blocked cell or it has a character
 solvedCell :: Cell -> Bool
 solvedCell c = case cellState c of
   Blocked       -> True
   Free (Just _) -> True
   _             -> False
 
+-- | Return true if all its cell are solved,
+-- it's a naive function as it won't check if the given words are actually there
+-- it considers the grid has been completed intelligently
 solvedGrid :: Grid -> Bool
 solvedGrid = all solvedCell . gridCells
 
@@ -77,20 +82,30 @@ data Segment = Segment
   , orientation  :: SegmentOrientation
   }
 
+-- | From a grid, determine all its segments
 segments :: Grid -> [Segment]
 segments = undefined
 
-newtype Collapse = Collapse { collapsingCells :: (Cell, Cell) }
+-- | Apply a string to a segment, will return a segment on success
+applyWordToSegment :: Segment -> String -> Maybe Segment
+applyWordToSegment = undefined
 
-collapsingSegments :: [Segment] -> [Collapse]
+newtype CollapseNode = CollapseNode { collapsingCells :: (Cell, Cell) }
+
+-- | From a list of segments, will return all the collapsing nodes
+collapsingSegments :: [Segment] -> [CollapseNode]
 collapsingSegments = undefined
 
-collapsesWell :: [Collapse] -> Bool
+-- | Determines if all the collapses are OK
+collapsesWell :: [CollapseNode] -> Bool
 collapsesWell = undefined
 
-applySegments :: Grid -> [Segment] -> Grid
+-- | Apply segments to a grid, will return a new grid with the applied segments on success
+applySegments :: Grid -> [Segment] -> Maybe Grid
 applySegments = undefined
 
+-- | From non-completed grid and a list of words, will return a soluce list of grid
+-- or an error if it can't find a solution, which shouldn't happen
 solve :: Grid -> [String] -> Grid
 solve grid words = undefined
 
