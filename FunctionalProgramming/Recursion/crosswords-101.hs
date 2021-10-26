@@ -1,3 +1,5 @@
+import Data.Char (isAlpha)
+
 newtype Coordinate = Coordinate
   { coordinateValue :: (Int, Int) } deriving (Eq)
 
@@ -17,7 +19,9 @@ instance Show CellState where
 parseCellState :: Char -> CellState
 parseCellState '-' = Free Nothing
 parseCellState '+' = Blocked
-parseCellState _   = error "Unknown cell state"
+parseCellState c
+  | isAlpha c = Free (Just c)
+  | otherwise = error "Unknown cell state"
 
 data Grid = Grid
   { gridWidth :: Int
