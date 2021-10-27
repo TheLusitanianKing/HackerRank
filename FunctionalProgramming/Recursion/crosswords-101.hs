@@ -1,7 +1,8 @@
-import Data.Char  (isAlpha)
-import Data.List  (nub)
-import Data.Maybe (mapMaybe)
-import Data.Set   (Set)
+import Data.Char      (isAlpha)
+import Data.Function  (on)
+import Data.List      (nub, sortBy)
+import Data.Maybe     (mapMaybe)
+import Data.Set       (Set)
 
 import qualified Data.Set as Set
 
@@ -128,9 +129,32 @@ segments g =
               (x2, y2) = coordinateValue . cellCoordinate $ c2
   in nub $ concatMap getSegments freeCells
 
+-- | Apply a char to a free cell, crashes if applying to a non-free cell
+applyCharToCell :: Char -> Cell -> Cell
+applyCharToCell ch c
+  | freeCell c = c { cellState = Free (Just ch) }
+  | otherwise  = error "Cannot apply a char to a non-free cell"
+
 -- | Apply a string to a segment, will return a segment on success
 applyWordToSegment :: Segment -> String -> Maybe Segment
-applyWordToSegment = undefined
+applyWordToSegment s word
+  | length word /= length cells = Nothing
+  | not (all freeCell cells)    = Nothing
+  | otherwise                   = return $ s { segmentCells = Set.fromList cells' }
+  where cells  = segmentCells s
+        cells' = zipWith applyCharToCell word $ sortCellsBySegmentOrientation s
+
+-- | Sort the cells of the segment by the orientation
+sortCellsBySegmentOrientation :: Segment -> [Cell]
+sortCellsBySegmentOrientation s
+  | segmentOrientation s == Vertical   =
+    -- comparing on y
+    sortBy (compare `on` (snd . getCoordinate)) cells
+  | segmentOrientation s == Horizontal =
+    -- comparing on x
+    sortBy (compare `on` (fst . getCoordinate)) cells
+  where cells = Set.toList $ segmentCells s
+        getCoordinate = coordinateValue . cellCoordinate
 
 newtype CollapseNode = CollapseNode { collapsingCells :: (Cell, Cell) }
 
@@ -153,4 +177,4 @@ solve grid words = undefined
 
 main :: IO ()
 main = interact $
-  show . (\ls -> solve (parseGrid $ init ls) (words . last $ ls)) . lines
+  show . (\ls -> segments $ solve (parseGrid $ init ls) (words . last $ ls)) . lines
