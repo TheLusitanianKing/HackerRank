@@ -1,6 +1,6 @@
 import Data.Char      (isAlpha)
 import Data.Function  (on)
-import Data.List      (nub, sortBy)
+import Data.List      (groupBy, nub, sortBy)
 import Data.Maybe     (mapMaybe)
 import Data.Set       (Set)
 
@@ -55,9 +55,14 @@ instance Show Grid where
             _     -> error ""
     in unlines . map (\y -> concatMap (\x -> displayCell (x, y) (Set.toList $ gridCells g)) [0..wi]) $ [0..wi]
 
+-- | Get all coordinates, from 0 to the given width, to make a grid
 allCoordinates :: Int -> [Coordinate]
 allCoordinates width = fmap Coordinate $ (,) <$> [0..width'] <*> [0..width']
   where width' = width - 1
+
+-- | Get the actual coordinate value from cell
+getCoordinateFromCell :: Cell -> (Int, Int)
+getCoordinateFromCell = coordinateValue . cellCoordinate 
 
 -- | From a list of lines representing a grid, read the actual information from it
 parseGrid :: [String] -> Grid
@@ -103,7 +108,6 @@ data Segment = Segment
   , segmentOrientation :: SegmentOrientation
   } deriving (Eq, Show)
 
--- | From a grid, determine all its segments
 segments :: Grid -> [Segment]
 segments g =
   let w = gridWidth g
@@ -149,26 +153,61 @@ sortCellsBySegmentOrientation :: Segment -> [Cell]
 sortCellsBySegmentOrientation s
   | segmentOrientation s == Vertical   =
     -- comparing on y
-    sortBy (compare `on` (snd . getCoordinate)) cells
+    sortBy (compare `on` (snd . getCoordinateFromCell)) cells
   | segmentOrientation s == Horizontal =
     -- comparing on x
-    sortBy (compare `on` (fst . getCoordinate)) cells
+    sortBy (compare `on` (fst . getCoordinateFromCell)) cells
   where cells = Set.toList $ segmentCells s
-        getCoordinate = coordinateValue . cellCoordinate
 
-newtype CollapseNode = CollapseNode { collapsingCells :: (Cell, Cell) }
+newtype CollapseNode = CollapseNode { collapsingCells :: Set Cell }
 
--- | From a list of segments, will return all the collapsing nodes
+createCollapseNodeFromCells :: [Cell] -> CollapseNode
+createCollapseNodeFromCells cs =
+  CollapseNode { collapsingCells = Set.fromList cs }
+
 collapsingSegments :: [Segment] -> [CollapseNode]
-collapsingSegments = undefined
+collapsingSegments sgs =
+  let cells = concatMap (Set.toList . segmentCells) sgs
+      sortedByCoordinates = sortBy (compare `on` getCoordinateFromCell) cells
+      groupedByCoordinates = groupBy ((==) `on` getCoordinateFromCell) sortedByCoordinates
+      collapsingCells = filter ((> 1) . length) groupedByCoordinates
+  in map createCollapseNodeFromCells collapsingCells
+
+-- | Determines if the collapse is OK
+collapseNodeMatch :: CollapseNode -> Bool
+collapseNodeMatch = allTheSame . Set.map getCoordinateFromCell . collapsingCells
+  where
+    allTheSame :: Set (Int, Int) -> Bool
+    allTheSame cs
+      | Set.null cs = False
+      | otherwise   = all (== head lcs) (tail lcs)
+      where lcs = Set.toList cs
 
 -- | Determines if all the collapses are OK
-collapsesWell :: [CollapseNode] -> Bool
-collapsesWell = undefined
+collapseNodesMatch :: [CollapseNode] -> Bool
+collapseNodesMatch = all collapseNodeMatch
 
--- | Apply segments to a grid, will return a new grid with the applied segments on success
-applySegments :: Grid -> [Segment] -> Maybe Grid
-applySegments = undefined
+-- | Determines if the segments all collapse well
+segmentsMatches :: [Segment] -> Bool
+segmentsMatches = collapseNodesMatch . collapsingSegments
+
+applyCell :: Grid -> Cell -> Grid
+applyCell g c
+  | Set.size cellFromGrid /= 1 = error "Unexisting cell in the grid."
+  | otherwise =
+    let cell = head . Set.toList $ cellFromGrid
+        gcs' = Set.insert c . Set.delete cell $ gcs
+    in g { gridCells = gcs' }
+  where
+    gcs = gridCells g
+    cellFromGrid = Set.filter ((== getCoordinateFromCell c) . getCoordinateFromCell) gcs
+
+applySegment :: Grid -> Segment -> Grid
+applySegment g sg = foldr (flip applyCell) g (segmentCells sg)
+
+-- | Apply segments to a grid, will return a new grid with the applied segments
+applySegments :: Grid -> [Segment] -> Grid
+applySegments = foldr (flip applySegment)
 
 -- | From non-completed grid and a list of words, will return a soluce list of grid
 -- or an error if it can't find a solution, which shouldn't happen
