@@ -209,10 +209,26 @@ applySegment g sg = foldr (flip applyCell) g (segmentCells sg)
 applySegments :: Grid -> [Segment] -> Grid
 applySegments = foldr (flip applySegment)
 
+type SegmentWordCombination = (Segment, String)
+
+-- | From a list of segments and a list of words
+-- return a list of possible combinations in terms of size (won't check for collision)
+segmentsWordsCombination :: [Segment] -> [String] -> [[SegmentWordCombination]]
+segmentsWordsCombination segments words
+  | length segments /= length words =
+    error "Number of segments should be the same than number of words."
+  | otherwise = undefined
+
 -- | From non-completed grid and a list of words, will return a soluce list of grid
 -- or an error if it can't find a solution, which shouldn't happen
 solve :: Grid -> [String] -> Grid
-solve grid words = undefined
+solve grid words
+  | null sgsPossibility = error "No solution."
+  | otherwise = applySegments grid (head sgsPossibility) -- TODO: could check for solvedGrid
+  where
+    sgs = segments grid
+    combinations = segmentsWordsCombination sgs words
+    sgsPossibility = filter segmentsMatches . map (mapMaybe (uncurry applyWordToSegment)) $ combinations
 
 main :: IO ()
 main = interact $
