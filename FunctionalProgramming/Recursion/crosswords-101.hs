@@ -118,31 +118,37 @@ findCellByCoordinate c cs =
     []    -> Nothing
     (r:_) -> Just r 
 
+takeFrom :: (Int -> Cell -> Cell -> [Coordinate]) -> Bool -> Int -> Cell -> Cell -> [Cell] -> [Cell]
+takeFrom f rev w c1 c2 freeCells =
+  let cs  = f w c1 c2
+      cs' = if rev then reverse cs else cs
+  in catMaybes . takeWhile isJust . map (`findCellByCoordinate` freeCells) $ cs'
+
 takeDownFrom, takeUpFrom, takeLeftFrom, takeRightFrom :: Int -> Cell -> Cell -> [Cell] -> [Cell]
-takeDownFrom w c1 c2 freeCells =
-  let (x, y1) = getCoordinateFromCell c1
-      (_, y2) = getCoordinateFromCell c2
-      y = min y1 y2
-      cs = fmap Coordinate $ (,) <$> [x] <*> [y..w]
-  in catMaybes . takeWhile isJust $ map (`findCellByCoordinate` freeCells) cs
-takeUpFrom w c1 c2 freeCells =
-  let (x, y1) = getCoordinateFromCell c1
-      (_, y2) = getCoordinateFromCell c2
-      y = max y1 y2
-      cs = fmap Coordinate $ (,) <$> [x] <*> [0..y]
-  in catMaybes . takeWhile isJust . map (`findCellByCoordinate` freeCells) $ reverse cs
-takeLeftFrom w c1 c2 freeCells =
-  let (x1, y) = getCoordinateFromCell c1
-      (x2, _) = getCoordinateFromCell c2
-      x = max x1 x2
-      cs = fmap Coordinate $ (,) <$> [0..x] <*> [y]
-  in catMaybes . takeWhile isJust . map (`findCellByCoordinate` freeCells) $ reverse cs
-takeRightFrom w c1 c2 freeCells =
-  let (x1, y) = getCoordinateFromCell c1
-      (x2, _) = getCoordinateFromCell c2
-      x = min x1 x2
-      cs = fmap Coordinate $ (,) <$> [x..w] <*> [y]
-  in catMaybes . takeWhile isJust $ map (`findCellByCoordinate` freeCells) cs
+takeDownFrom = takeFrom f False
+  where f w c1 c2 = 
+          let (x, y1) = getCoordinateFromCell c1
+              (_, y2) = getCoordinateFromCell c2
+              y = min y1 y2
+          in fmap Coordinate $ (,) <$> [x] <*> [y..w]
+takeUpFrom = takeFrom f True
+  where f w c1 c2 = 
+          let (x, y1) = getCoordinateFromCell c1
+              (_, y2) = getCoordinateFromCell c2
+              y = max y1 y2
+          in fmap Coordinate $ (,) <$> [x] <*> [0..y]
+takeLeftFrom = takeFrom f True
+  where f w c1 c2 = 
+          let (x1, y) = getCoordinateFromCell c1
+              (x2, _) = getCoordinateFromCell c2
+              x = max x1 x2
+          in fmap Coordinate $ (,) <$> [0..x] <*> [y]
+takeRightFrom = takeFrom f False
+  where f w c1 c2 = 
+          let (x1, y) = getCoordinateFromCell c1
+              (x2, _) = getCoordinateFromCell c2
+              x = min x1 x2
+          in fmap Coordinate $ (,) <$> [x..w] <*> [y]
 
 segments :: Grid -> [Segment]
 segments g =
@@ -153,18 +159,22 @@ segments g =
       trySegment :: Cell -> Cell -> Maybe Segment
       trySegment c1 c2
         | x1 == x2 && abs (y1 - y2) == 1 =
-          -- let coordinates = fmap Coordinate $ (,) <$> [x1] <*> [0..w]
           return Segment
               { segmentOrientation = Vertical
-              , segmentCells = Set.fromList . nub $ takeDownFrom w c1 c2 freeCells ++ [c1] ++ [c2] ++ takeUpFrom w c1 c2 freeCells
-                --Set.fromList $ filter ((`elem` coordinates). cellCoordinate) freeCells
+              , segmentCells = Set.fromList . nub $
+                  takeDownFrom w c1 c2 freeCells ++
+                  [c1] ++
+                  [c2] ++
+                  takeUpFrom w c1 c2 freeCells
               }
         | y1 == y2 && abs (x1 - x2) == 1 =
-          -- let coordinates = fmap Coordinate $ (,) <$> [0..w] <*> [y1]
           return Segment
             { segmentOrientation = Horizontal
-            , segmentCells = Set.fromList . nub $ takeLeftFrom w c1 c2 freeCells ++ [c1] ++ [c2] ++ takeRightFrom w c1 c2 freeCells
-              -- Set.fromList $ filter ((`elem` coordinates). cellCoordinate) freeCells
+            , segmentCells = Set.fromList . nub $
+                takeLeftFrom w c1 c2 freeCells ++
+                [c1] ++
+                [c2] ++
+                takeRightFrom w c1 c2 freeCells
             }
         | otherwise = Nothing
         where (x1, y1) = getCoordinateFromCell c1
@@ -266,7 +276,7 @@ segmentsWordsCombination segments words@(w:ws)
 solve :: Grid -> [Text] -> Grid
 solve grid ws
   | null sgsPossibility = error "No solution."
-  | otherwise = applySegments grid (head sgsPossibility) -- TODO: could also check for solvedGrid here
+  | otherwise = applySegments grid (head sgsPossibility) -- could also check for solvedGrid here if we wanted
   where
     sgs = segments grid
     combinations = segmentsWordsCombination sgs ws
