@@ -1,10 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import Data.Char      (isAlpha)
 import Data.Function  (on)
-import Data.List      (groupBy, nub, sortBy)
-import Data.Maybe     (mapMaybe)
+import Data.List      ((\\), groupBy, nub, sortBy)
+import Data.Maybe     (catMaybes, isJust, mapMaybe)
 import Data.Set       (Set)
+import Data.Text      (Text)
 
-import qualified Data.Set as Set
+import qualified Data.Set  as Set
+import qualified Data.Text as Text
 
 newtype Coordinate = Coordinate
   { coordinateValue :: (Int, Int) } deriving (Eq, Ord)
@@ -108,29 +112,63 @@ data Segment = Segment
   , segmentOrientation :: SegmentOrientation
   } deriving (Eq, Show)
 
+findCellByCoordinate :: Coordinate -> [Cell] -> Maybe Cell
+findCellByCoordinate c cs =
+  case filter ((==c) . cellCoordinate) cs of
+    []    -> Nothing
+    (r:_) -> Just r 
+
+takeDownFrom, takeUpFrom, takeLeftFrom, takeRightFrom :: Int -> Cell -> Cell -> [Cell] -> [Cell]
+takeDownFrom w c1 c2 freeCells =
+  let (x, y1) = getCoordinateFromCell c1
+      (_, y2) = getCoordinateFromCell c2
+      y = min y1 y2
+      cs = fmap Coordinate $ (,) <$> [x] <*> [y..w]
+  in catMaybes . takeWhile isJust $ map (`findCellByCoordinate` freeCells) cs
+takeUpFrom w c1 c2 freeCells =
+  let (x, y1) = getCoordinateFromCell c1
+      (_, y2) = getCoordinateFromCell c2
+      y = max y1 y2
+      cs = fmap Coordinate $ (,) <$> [x] <*> [0..y]
+  in catMaybes . takeWhile isJust . map (`findCellByCoordinate` freeCells) $ reverse cs
+takeLeftFrom w c1 c2 freeCells =
+  let (x1, y) = getCoordinateFromCell c1
+      (x2, _) = getCoordinateFromCell c2
+      x = max x1 x2
+      cs = fmap Coordinate $ (,) <$> [0..x] <*> [y]
+  in catMaybes . takeWhile isJust . map (`findCellByCoordinate` freeCells) $ reverse cs
+takeRightFrom w c1 c2 freeCells =
+  let (x1, y) = getCoordinateFromCell c1
+      (x2, _) = getCoordinateFromCell c2
+      x = min x1 x2
+      cs = fmap Coordinate $ (,) <$> [x..w] <*> [y]
+  in catMaybes . takeWhile isJust $ map (`findCellByCoordinate` freeCells) cs
+
 segments :: Grid -> [Segment]
 segments g =
   let w = gridWidth g
       freeCells = Set.toList . Set.filter freeCell $ gridCells g
       getSegments :: Cell -> [Segment]
-      getSegments c = mapMaybe (\c' -> trySegment c c' freeCells) freeCells
-      trySegment :: Cell -> Cell -> [Cell] -> Maybe Segment
-      trySegment c1 c2 allFreeCells
+      getSegments c = mapMaybe (trySegment c) freeCells
+      trySegment :: Cell -> Cell -> Maybe Segment
+      trySegment c1 c2
         | x1 == x2 && abs (y1 - y2) == 1 =
-          let coordinates = fmap Coordinate $ (,) <$> [x1] <*> [0..w]
-          in return Segment
+          -- let coordinates = fmap Coordinate $ (,) <$> [x1] <*> [0..w]
+          return Segment
               { segmentOrientation = Vertical
-              , segmentCells = Set.fromList $ filter ((`elem` coordinates). cellCoordinate) freeCells
+              , segmentCells = Set.fromList . nub $ takeDownFrom w c1 c2 freeCells ++ [c1] ++ [c2] ++ takeUpFrom w c1 c2 freeCells
+                --Set.fromList $ filter ((`elem` coordinates). cellCoordinate) freeCells
               }
         | y1 == y2 && abs (x1 - x2) == 1 =
-          let coordinates = fmap Coordinate $ (,) <$> [0..w] <*> [y1]
-          in return Segment
+          -- let coordinates = fmap Coordinate $ (,) <$> [0..w] <*> [y1]
+          return Segment
             { segmentOrientation = Horizontal
-            , segmentCells = Set.fromList $ filter ((`elem` coordinates). cellCoordinate) freeCells
+            , segmentCells = Set.fromList . nub $ takeLeftFrom w c1 c2 freeCells ++ [c1] ++ [c2] ++ takeRightFrom w c1 c2 freeCells
+              -- Set.fromList $ filter ((`elem` coordinates). cellCoordinate) freeCells
             }
         | otherwise = Nothing
-        where (x1, y1) = coordinateValue . cellCoordinate $ c1
-              (x2, y2) = coordinateValue . cellCoordinate $ c2
+        where (x1, y1) = getCoordinateFromCell c1
+              (x2, y2) = getCoordinateFromCell c2
   in nub $ concatMap getSegments freeCells
 
 -- | Apply a char to a free cell, crashes if applying to a non-free cell
@@ -213,23 +251,27 @@ type SegmentWordCombination = (Segment, String)
 
 -- | From a list of segments and a list of words
 -- return a list of possible combinations in terms of size (won't check for collision)
-segmentsWordsCombination :: [Segment] -> [String] -> [[SegmentWordCombination]]
-segmentsWordsCombination segments words
+segmentsWordsCombination :: [Segment] -> [Text] -> [[SegmentWordCombination]]
+segmentsWordsCombination [] [] = [[]]
+segmentsWordsCombination segments words@(w:ws)
   | length segments /= length words =
     error "Number of segments should be the same than number of words."
-  | otherwise = undefined
+  | otherwise =
+    let wordLength = Text.length w
+        ssMatchingLength = filter ((== wordLength) . length . segmentCells) segments
+    in map (\seg -> concatMap ((seg, Text.unpack w):) $ segmentsWordsCombination (segments \\ [seg]) ws) ssMatchingLength
 
 -- | From non-completed grid and a list of words, will return a soluce list of grid
 -- or an error if it can't find a solution, which shouldn't happen
-solve :: Grid -> [String] -> Grid
-solve grid words
+solve :: Grid -> [Text] -> Grid
+solve grid ws
   | null sgsPossibility = error "No solution."
-  | otherwise = applySegments grid (head sgsPossibility) -- TODO: could check for solvedGrid
+  | otherwise = applySegments grid (head sgsPossibility) -- TODO: could also check for solvedGrid here
   where
     sgs = segments grid
-    combinations = segmentsWordsCombination sgs words
+    combinations = segmentsWordsCombination sgs ws
     sgsPossibility = filter segmentsMatches . map (mapMaybe (uncurry applyWordToSegment)) $ combinations
 
 main :: IO ()
 main = interact $
-  show . (\ls -> segments $ solve (parseGrid $ init ls) (words . last $ ls)) . lines
+  show . (\ls -> solve (parseGrid $ init ls) (Text.splitOn ";" . Text.pack . last $ ls)) . lines
