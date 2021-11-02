@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import Control.Monad  (forM_)
 import Data.Char      (isAlpha)
 import Data.Function  (on)
 import Data.List      ((\\), groupBy, nub, sortBy)
@@ -223,9 +224,9 @@ collapsingSegments sgs =
 
 -- | Determines if the collapse is OK
 collapseNodeMatch :: CollapseNode -> Bool
-collapseNodeMatch = allTheSame . Set.map getCoordinateFromCell . collapsingCells
+collapseNodeMatch = allTheSame . Set.map cellState . collapsingCells
   where
-    allTheSame :: Set (Int, Int) -> Bool
+    allTheSame :: Set CellState -> Bool
     allTheSame cs
       | Set.null cs = False
       | otherwise   = all (== head lcs) (tail lcs)
@@ -269,7 +270,7 @@ segmentsWordsCombination segments words@(w:ws)
   | otherwise =
     let wordLength = Text.length w
         ssMatchingLength = filter ((== wordLength) . length . segmentCells) segments
-    in map (\seg -> concatMap ((seg, Text.unpack w):) $ segmentsWordsCombination (segments \\ [seg]) ws) ssMatchingLength
+    in concatMap (\seg -> map ((seg, Text.unpack w):) $ segmentsWordsCombination (segments \\ [seg]) ws) ssMatchingLength
 
 -- | From non-completed grid and a list of words, will return a soluce list of grid
 -- or an error if it can't find a solution, which shouldn't happen
