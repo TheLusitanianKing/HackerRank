@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Data.Char     (chr)
+import Data.Char     (chr, ord)
 import Data.Map      (Map)
 import Data.Maybe    (mapMaybe)
 import Data.Sequence (Seq(..))
@@ -53,6 +53,16 @@ decrPointer = undefined
 readMemory :: Memory -> Int
 readMemory m = Map.findWithDefault 0 (memoryPointer m) (memoryContent m)
 
+insertInMemory :: Memory -> Int -> Memory
+insertInMemory m x =
+  m { memoryContent = Map.insert (memoryPointer m) x (memoryContent m) }
+
+moveToNextLoopClose :: Seq Command -> Seq Command
+moveToNextLoopClose cs = undefined
+
+moveToPreviousLoopOpen :: Seq Command -> Seq Command
+moveToPreviousLoopOpen cs = undefined
+
 doInterpret :: String -> Int -> Memory -> Text -> Seq Command -> String
 doInterpret acc 0 _ _ _ =
   acc ++ "\n" ++ "PROCESS TIME OUT. KILLED!!!"
@@ -63,9 +73,20 @@ doInterpret acc remainingCommands memory entry (command :<| commands) =
     IncrByte    -> doInterpret acc remaining' (incrMemory memory) entry commands'
     DecrByte    -> doInterpret acc remaining' (decrMemory memory) entry commands'
     OutputChar  -> doInterpret (chr (readMemory memory) : acc) remaining' memory entry commands'
-    ReadByte    -> undefined
-    LoopOpen    -> undefined
-    LoopClose   -> undefined
+    ReadByte    ->
+      if Text.null entry then error "The whole entry has been consumed already."
+      else
+        let byte   = ord . Text.head $ entry
+            entry' = Text.tail entry
+        in doInterpret acc remaining' (insertInMemory memory byte) entry' commands'
+    LoopOpen    ->
+      if readMemory memory == 0
+        then doInterpret acc remaining' memory entry (moveToNextLoopClose commands')
+        else doInterpret acc remaining' memory entry commands'
+    LoopClose   -> 
+      if readMemory memory /= 0
+        then doInterpret acc remaining' memory entry (moveToPreviousLoopOpen commands')
+        else doInterpret acc remaining' memory entry commands'
     EndProgram  -> acc
   where remaining' = remainingCommands - 1
         commands'  = commands Seq.|> command
