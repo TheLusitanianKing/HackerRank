@@ -42,13 +42,26 @@ data Memory = Memory
 emptyMemory :: Memory
 emptyMemory = Memory Map.empty 0
 
+-- TODO: refactor those next two
 incrMemory, decrMemory :: Memory -> Memory
-incrMemory = undefined
-decrMemory = undefined
+incrMemory m = m { memoryContent = content' }
+  where k = memoryPointer m
+        c = memoryContent m
+        content' =
+          if Map.member k c
+            then Map.adjust ((`mod` 256) . (+) 1) k c
+            else Map.insert k 1 c
+decrMemory m = m { memoryContent = content' }
+  where k = memoryPointer m
+        c = memoryContent m
+        content' =
+          if Map.member k c
+            then Map.adjust ((`mod` 256) . (-) 1) k c
+            else Map.insert k 255 c
 
 incrPointer, decrPointer :: Memory -> Memory
-incrPointer = undefined
-decrPointer = undefined
+incrPointer m = m { memoryPointer = memoryPointer m + 1 }
+decrPointer m = m { memoryPointer = memoryPointer m - 1 }
 
 readMemory :: Memory -> Int
 readMemory m = Map.findWithDefault 0 (memoryPointer m) (memoryContent m)
