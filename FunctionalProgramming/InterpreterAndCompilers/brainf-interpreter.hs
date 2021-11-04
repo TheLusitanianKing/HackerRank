@@ -34,6 +34,7 @@ interpret entry commands
   | Seq.null commands = error "No commands to run." 
   | otherwise         = doInterpret [] maxCommands emptyMemory entry commands
 
+-- This is might be transformed into a monad
 data Memory = Memory 
   { memoryContent :: Map Int Int
   , memoryPointer :: Int
@@ -42,22 +43,21 @@ data Memory = Memory
 emptyMemory :: Memory
 emptyMemory = Memory Map.empty 0
 
--- TODO: refactor those next two
+-- A similar function might exist already in Data.Map but I couldn't find it easily
+insertOrAdjust :: (Ord k) => (a -> a) -> k -> a -> Map k a -> Map k a
+insertOrAdjust f k d m
+  | Map.member k m = Map.adjust f k m
+  | otherwise      = Map.insert k d m
+
 incrMemory, decrMemory :: Memory -> Memory
 incrMemory m = m { memoryContent = content' }
   where k = memoryPointer m
-        c = memoryContent m
-        content' =
-          if Map.member k c
-            then Map.adjust ((`mod` 256) . (+) 1) k c
-            else Map.insert k 1 c
+        content = memoryContent m
+        content' = insertOrAdjust (\x -> (x + 1) `mod` 256) k 1 content
 decrMemory m = m { memoryContent = content' }
   where k = memoryPointer m
-        c = memoryContent m
-        content' =
-          if Map.member k c
-            then Map.adjust ((`mod` 256) . (-) 1) k c
-            else Map.insert k 255 c
+        content = memoryContent m
+        content' = insertOrAdjust (\x -> (x - 1) `mod` 256) k 255 content
 
 incrPointer, decrPointer :: Memory -> Memory
 incrPointer m = m { memoryPointer = memoryPointer m + 1 }
@@ -71,21 +71,25 @@ insertInMemory m x =
   m { memoryContent = Map.insert (memoryPointer m) x (memoryContent m) }
 
 moveToNextLoopClose :: Seq Command -> Seq Command
-moveToNextLoopClose cs = undefined
+moveToNextLoopClose commands@(LoopClose :<| _) = commands
+moveToNextLoopClose commands@(c :<| cs) = moveToNextLoopClose (cs Seq.|> c)
 
 moveToPreviousLoopOpen :: Seq Command -> Seq Command
-moveToPreviousLoopOpen cs = undefined
+moveToPreviousLoopOpen commands@(LoopOpen :<| _) = commands
+moveToPreviousLoopOpen commands@(cs :|> c) = moveToPreviousLoopOpen (c Seq.<| cs)
 
 doInterpret :: String -> Int -> Memory -> Text -> Seq Command -> String
 doInterpret acc 0 _ _ _ =
   acc ++ "\n" ++ "PROCESS TIME OUT. KILLED!!!"
-doInterpret acc remainingCommands memory entry (command :<| commands) =
+doInterpret acc remainingCommands memory entry (command :<| commands) = do
   case command of
     IncrPointer -> doInterpret acc remaining' (incrPointer memory) entry commands'
     DecrPointer -> doInterpret acc remaining' (decrPointer memory) entry commands'
     IncrByte    -> doInterpret acc remaining' (incrMemory memory) entry commands'
     DecrByte    -> doInterpret acc remaining' (decrMemory memory) entry commands'
-    OutputChar  -> doInterpret (chr (readMemory memory) : acc) remaining' memory entry commands'
+    OutputChar  -> 
+      let char = [chr (readMemory memory)]
+      in doInterpret (acc ++ char) remaining' memory entry commands'
     ReadByte    ->
       if Text.null entry then error "The whole entry has been consumed already."
       else
@@ -96,7 +100,7 @@ doInterpret acc remainingCommands memory entry (command :<| commands) =
       if readMemory memory == 0
         then doInterpret acc remaining' memory entry (moveToNextLoopClose commands')
         else doInterpret acc remaining' memory entry commands'
-    LoopClose   -> 
+    LoopClose   ->
       if readMemory memory /= 0
         then doInterpret acc remaining' memory entry (moveToPreviousLoopOpen commands')
         else doInterpret acc remaining' memory entry commands'
@@ -109,6 +113,4 @@ main = do
   (l:ls) <- tail . lines <$> getContents
   let entry = Text.pack . init $ l
       commands = parseCommands . unlines $ ls
-  putStrLn $ "Entry: " ++ Text.unpack entry
-  putStrLn $ "Commands: " ++ show commands
   putStrLn $ interpret entry commands
