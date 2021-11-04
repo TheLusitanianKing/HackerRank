@@ -1,5 +1,4 @@
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE NumericUnderscores, OverloadedStrings #-}
 
 import Data.Char     (chr, ord)
 import Data.Map      (Map)
@@ -31,7 +30,8 @@ parseCommands = Seq.fromList . (++ [EndProgram]) . mapMaybe parseCommand
 maxCommands :: Int
 maxCommands = 100_000
 
--- I could have used a monad to keep track of this stuff
+-- I could have used a monad to keep track of this stuff and chain operations
+-- TODO: maybe some day?
 data Memory = Memory 
   { memoryContent :: Map Int Int
   , memoryPointer :: Int
@@ -56,7 +56,6 @@ incrMemory, decrMemory :: Memory -> Memory
 incrMemory = writeAtMemory (\x -> (x + 1) `mod` 256) 1
 decrMemory = writeAtMemory (\x -> (x - 1) `mod` 256) 255
 
--- use Map.insert directly if it causes performance issue
 insertInMemory :: Int -> Memory -> Memory
 insertInMemory x = writeAtMemory (const x) x
 
@@ -67,24 +66,27 @@ decrPointer m = m { memoryPointer = memoryPointer m - 1 }
 readMemory :: Memory -> Int
 readMemory m = Map.findWithDefault 0 (memoryPointer m) (memoryContent m)
 
-moveToNextLoopClose, moveToPreviousLoopOpen :: Seq Command -> Seq Command
-moveToNextLoopClose    = doMoveToNextLoopClose 0
-moveToPreviousLoopOpen = doMoveToPreviousLoopOpen 0
+moveToNextLoopClose :: Seq Command -> Seq Command
+moveToNextLoopClose = doMoveToNextLoopClose 0
+  where
+    doMoveToNextLoopClose :: Int -> Seq Command -> Seq Command
+    doMoveToNextLoopClose 0 commands@(LoopClose :<| _) = commands
+    doMoveToNextLoopClose n (c :<| cs)
+      | c == LoopClose = doMoveToNextLoopClose (n-1) commands'
+      | c == LoopOpen  = doMoveToNextLoopClose (n+1) commands'
+      | otherwise      = doMoveToNextLoopClose n     commands'
+      where commands' = cs Seq.|> c
 
-doMoveToNextLoopClose, doMoveToPreviousLoopOpen :: Int -> Seq Command -> Seq Command
-doMoveToNextLoopClose 0 commands@(LoopClose :<| _) = commands
-doMoveToNextLoopClose n (c :<| cs)
-  | c == LoopClose = doMoveToNextLoopClose (n-1) commands'
-  | c == LoopOpen  = doMoveToNextLoopClose (n+1) commands'
-  | otherwise      = doMoveToNextLoopClose n     commands'
-  where commands' = cs Seq.|> c
-  
-doMoveToPreviousLoopOpen 0 commands@(LoopOpen :<| _) = commands
-doMoveToPreviousLoopOpen n (cs :|> c)
-  | c == LoopClose = doMoveToPreviousLoopOpen (n+1) commands'
-  | c == LoopOpen  = doMoveToPreviousLoopOpen (n-1) commands'
-  | otherwise      = doMoveToPreviousLoopOpen n commands'
-  where commands' = c Seq.<| cs
+moveToPreviousLoopOpen :: Seq Command -> Seq Command
+moveToPreviousLoopOpen = doMoveToPreviousLoopOpen 0
+  where
+    doMoveToPreviousLoopOpen :: Int -> Seq Command -> Seq Command  
+    doMoveToPreviousLoopOpen 0 commands@(LoopOpen :<| _) = commands
+    doMoveToPreviousLoopOpen n (cs :|> c)
+      | c == LoopClose = doMoveToPreviousLoopOpen (n+1) commands'
+      | c == LoopOpen  = doMoveToPreviousLoopOpen (n-1) commands'
+      | otherwise      = doMoveToPreviousLoopOpen n commands'
+      where commands' = c Seq.<| cs
 
 interpret :: Text -> Seq Command -> String
 interpret entry commands
@@ -92,7 +94,8 @@ interpret entry commands
   | otherwise         = doInterpret [] maxCommands emptyMemory entry commands
   where
     doInterpret :: String -> Int -> Memory -> Text -> Seq Command -> String
-    doInterpret acc 0 _ _ _ = acc ++ "\n" ++ "PROCESS TIME OUT. KILLED!!!"
+    doInterpret acc remaining _ _ _ | remaining < 0 =
+      acc ++ "\n" ++ "PROCESS TIME OUT. KILLED!!!"
     doInterpret acc remaining memory entry (command :<| commands) =
       case command of
         IncrPointer -> doInterpret acc remaining' (incrPointer memory) entry commands'
