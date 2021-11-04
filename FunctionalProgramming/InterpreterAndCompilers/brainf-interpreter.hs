@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 import Data.Char     (chr, ord)
 import Data.Map      (Map)
@@ -11,7 +12,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Text     as Text
 
 data Command = IncrPointer | DecrPointer | IncrByte | DecrByte | OutputChar
-             | ReadByte | LoopOpen | LoopClose | EndProgram deriving (Show)
+             | ReadByte | LoopOpen | LoopClose | EndProgram deriving (Eq, Show)
 
 parseCommand :: Char -> Maybe Command
 parseCommand '>' = return IncrPointer
@@ -28,13 +29,13 @@ parseCommands :: String -> Seq Command
 parseCommands = Seq.fromList . (++ [EndProgram]) . mapMaybe parseCommand
 
 maxCommands :: Int
-maxCommands = 100000
+maxCommands = 100_000
 
--- we could have used a monad to keep track
+-- I could have used a monad to keep track of this stuff
 data Memory = Memory 
   { memoryContent :: Map Int Int
   , memoryPointer :: Int
-  }
+  } deriving (Show)
 
 emptyMemory :: Memory
 emptyMemory = Memory Map.empty 0
@@ -66,13 +67,24 @@ decrPointer m = m { memoryPointer = memoryPointer m - 1 }
 readMemory :: Memory -> Int
 readMemory m = Map.findWithDefault 0 (memoryPointer m) (memoryContent m)
 
-moveToNextLoopClose :: Seq Command -> Seq Command
-moveToNextLoopClose commands@(LoopClose :<| _) = commands
-moveToNextLoopClose (c :<| cs) = moveToNextLoopClose (cs Seq.|> c)
+moveToNextLoopClose, moveToPreviousLoopOpen :: Seq Command -> Seq Command
+moveToNextLoopClose    = doMoveToNextLoopClose 0
+moveToPreviousLoopOpen = doMoveToPreviousLoopOpen 0
 
-moveToPreviousLoopOpen :: Seq Command -> Seq Command
-moveToPreviousLoopOpen commands@(LoopOpen :<| _) = commands
-moveToPreviousLoopOpen (cs :|> c) = moveToPreviousLoopOpen (c Seq.<| cs)
+doMoveToNextLoopClose, doMoveToPreviousLoopOpen :: Int -> Seq Command -> Seq Command
+doMoveToNextLoopClose 0 commands@(LoopClose :<| _) = commands
+doMoveToNextLoopClose n (c :<| cs)
+  | c == LoopClose = doMoveToNextLoopClose (n-1) commands'
+  | c == LoopOpen  = doMoveToNextLoopClose (n+1) commands'
+  | otherwise      = doMoveToNextLoopClose n     commands'
+  where commands' = cs Seq.|> c
+  
+doMoveToPreviousLoopOpen 0 commands@(LoopOpen :<| _) = commands
+doMoveToPreviousLoopOpen n (cs :|> c)
+  | c == LoopClose = doMoveToPreviousLoopOpen (n+1) commands'
+  | c == LoopOpen  = doMoveToPreviousLoopOpen (n-1) commands'
+  | otherwise      = doMoveToPreviousLoopOpen n commands'
+  where commands' = c Seq.<| cs
 
 interpret :: Text -> Seq Command -> String
 interpret entry commands
