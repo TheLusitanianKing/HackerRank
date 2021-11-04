@@ -94,7 +94,8 @@ interpret entry commands
   | otherwise         = doInterpret [] maxCommands emptyMemory entry commands
   where
     doInterpret :: String -> Int -> Memory -> Text -> Seq Command -> String
-    doInterpret acc remaining _ _ _ | remaining < 0 =
+    doInterpret acc _ _ _ (EndProgram :<| _) = acc
+    doInterpret acc 0 _ _ _ =
       acc ++ "\n" ++ "PROCESS TIME OUT. KILLED!!!"
     doInterpret acc remaining memory entry (command :<| commands) =
       case command of
@@ -118,7 +119,6 @@ interpret entry commands
           if readMemory memory /= 0
             then doInterpret acc remaining' memory entry (moveToPreviousLoopOpen commands')
             else doInterpret acc remaining' memory entry commands'
-        EndProgram  -> acc
       where remaining' = remaining - 1
             commands'  = commands Seq.|> command
 
