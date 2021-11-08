@@ -1,12 +1,16 @@
 # HackerRank
-My solutions to HackerRank challenges. You can find those challenges and try to solve them yourself at https://www.hackerrank.com.
+Minhas soluções para resolver os desafios HackerRank. Pode encontrá-los e tentar resolvê-los aqui: https://www.hackerrank.com.
 
-**Example of challenges solved**: finding the [convex hull](https://en.wikipedia.org/wiki/Convex_hull) of a list of points ([:memo:](FunctionalProgramming/Recursion/convex-hull.hs)), implementing a [brainfuck](https://pt.wikipedia.org/wiki/Brainfuck) interpreter ([:memo:](FunctionalProgramming/InterpreterAndCompilers/brainf-interpreter.hs)), basic crossword solving ([:memo:](FunctionalProgramming/Recursion/crosswords-101.hs)), and many others. 
+**Exemplos de desafios resolvidos**: encontrar a [envoltória convexa](https://pt.wikipedia.org/wiki/Envoltória_convexa) de uma lista de pontos ([:memo:](FunctionalProgramming/Recursion/convex-hull.hs)), realização de um interpretador [brainfuck](https://pt.wikipedia.org/wiki/Brainfuck) ([:memo:](FunctionalProgramming/InterpreterAndCompilers/brainf-interpreter.hs)), solucionador de palavras cruzadas ([:memo:](FunctionalProgramming/Recursion/crosswords-101.hs)), e muito mais. 
 
-## Functional programming current record (November 4th, 2021)
-Solved **52** out of the **93** challenges. Ranked **3rd** in Portugal. 🇵🇹
+## Classifição actual na programação funcional (8 de novembro de 2021)
+**52** desafios resolvidos, nos **93** existantes. **3º** classificado em Portugal. 🇵🇹
 
-**My profile**: https://www.hackerrank.com/reidelusitania
+**Meu perfil**: https://www.hackerrank.com/reidelusitania
 
 ## N.B.
-Ignore the [Algorithms](Algorithms/) folder, there's nothing interesting in there.
+Pode ignorar o repertório [Algorithms](Algorithms/).
+
+***
+
+:england: [English version/Versão inglesa](README-en.md)
