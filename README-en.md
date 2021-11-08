@@ -1,3 +1,6 @@
+:portugal: [Versão portuguesa/Portuguese version](README.md)
+***
+
 # HackerRank
 My solutions to HackerRank challenges. You can find those challenges and try to solve them yourself at https://www.hackerrank.com.
 
@@ -10,7 +13,3 @@ Solved **52** out of the **93** challenges. Ranked **3rd** in Portugal. 🇵🇹
 
 ## N.B.
 Ignore the [Algorithms](Algorithms/) folder.
-
-***
-
-:portugal: [Versão portuguesa/Portuguese version](README.md)

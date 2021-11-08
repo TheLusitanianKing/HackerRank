@@ -1,3 +1,6 @@
+:england: [English version/Versão inglesa](README-en.md)
+***
+
 # HackerRank
 Minhas soluções para resolver os desafios HackerRank. Pode encontrá-los e tentar resolvê-los aqui: https://www.hackerrank.com.
 
@@ -10,7 +13,3 @@ Minhas soluções para resolver os desafios HackerRank. Pode encontrá-los e ten
 
 ## N.B.
 Pode ignorar o repertório [Algorithms](Algorithms/).
-
-***
-
-:england: [English version/Versão inglesa](README-en.md)
