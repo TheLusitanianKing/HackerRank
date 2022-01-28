@@ -1,1 +1,0 @@
-main = interact $ show . (\n -> product [1..n]) . (read :: String -> Integer)

@@ -1,1 +1,0 @@
-main = interact $ show . (\[n, p] -> minimum [p `div` 2, n `div` 2 - p `div` 2]) . map read . lines
